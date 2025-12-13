@@ -100,10 +100,10 @@ ProductVer4Range=0
 6=00FFFFFF
 7=00FFFFFF
 [PTimer]
-PTimer=64020764
+PTimer=65092608
 [Size]
 4=0,0,0,0
-1=0,0,1087,467,171
+1=0,0,1087,467,4149
 2=0,0,1087,467,847
 3=0,0,0,0,26
 5=0,0,0,0
@@ -127,14 +127,15 @@ GroupExpand=0,1,1,0
 [BreakPoint]
 0=
 [Find]
-1="message"
-2="invoke getfilesize"
-3="start"
-4="first file"
-5="RegisterClas"
-6="windclas"
-7="título"
-8="Notepad"
+1="Open file"
+2="message"
+3="invoke getfilesize"
+4="start"
+5="first file"
+6="RegisterClas"
+7="windclas"
+8="título"
+9="Notepad"
 [RADebugBP]
 2=0
 1=518

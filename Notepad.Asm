@@ -162,21 +162,22 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 						    mov hFile,eax
 						    invoke GetFileSize,hFile,NULL
 						    mov fileSize,eax
+							invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
 						
-						    ; --- CORRECCIÓN 1: Manejar archivo vacío explícitamente ---
+						    ; --- CORRECCIï¿½N 1: Manejar archivo vacï¿½o explï¿½citamente ---
 						    .if fileSize == 0
-						        ; Si está vacío, simplemente limpiamos el editor y no hacemos nada de memoria
+						        ; Si estï¿½ vacï¿½o, simplemente limpiamos el editor y no hacemos nada de memoria
 						        invoke SetWindowText,hEdit,NULL
 						    .else
 						        ; Si TIENE contenido, procedemos con la memoria
 						        
-						        ; --- CORRECCIÓN 2: Reservar fileSize + 1 byte ---
+						        ; --- CORRECCIï¿½N 2: Reservar fileSize + 1 byte ---
 						        ; Necesitamos espacio extra para el terminador nulo (el 0 del final)
 						        ; para no escribir fuera de la memoria reservada.
 						        mov eax, fileSize
-						        inc eax         ; Sumamos 1 al tamaño
+						        inc eax         ; Sumamos 1 al tamaï¿½o
 						        
-						        invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT, eax ; Usamos el tamaño + 1
+						        invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT, eax ; Usamos el tamaï¿½o + 1
 						        .if eax!=NULL
 						            push eax
 						            invoke GlobalLock,eax
@@ -196,7 +197,7 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 						            invoke GlobalFree,eax
 						        .endif
 						    .endif
-						    ; --- FIN DE LA CORRECCIÓN ---
+						    ; --- FIN DE LA CORRECCIï¿½N ---
 						
 						    invoke CloseHandle,hFile
 						    
@@ -257,6 +258,8 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 					; Get file size
 					invoke GetFileSize,hFile,NULL
 					mov fileSize,eax
+					inc fileSize
+					invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
 					
 					; Allocate memory for file content
 					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
@@ -320,6 +323,8 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 					; Get file size
 					invoke GetFileSize,hFile,NULL
 					mov fileSize,eax
+					inc fileSize
+					invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
 					
 					; Allocate memory for file content
 					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
