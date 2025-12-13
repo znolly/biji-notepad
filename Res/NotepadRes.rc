@@ -1,0 +1,4 @@
+#define IDI_ICON						100
+#define IDI_BMP							1
+IDI_ICON				ICON      DISCARDABLE "biji.ico"
+IDI_BMP					BITMAP    DISCARDABLE "Res\\biji_small.bmp"

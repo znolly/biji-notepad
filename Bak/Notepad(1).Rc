@@ -1,0 +1,2 @@
+#include "Res/NotepadRes.rc"
+#include "Res/NotepadDlg.rc"

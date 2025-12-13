@@ -1,0 +1,16 @@
+#define IDD_DLG1 1000
+#define IDC_IMG1 1001
+#define IDC_STC1 1002
+#define IDC_STC2 1003
+#define IDC_STC3 1004
+IDD_DLG1 DIALOGEX 6,6,248,329
+CAPTION "Info"
+FONT 8,"MS Sans Serif",400,0
+STYLE 0x10CF0000
+EXSTYLE 0x00000000
+BEGIN
+  CONTROL "#1",IDC_IMG1,"Static",0x5000020E,26,7,186,144,0x00000000
+  CONTROL "        Biji: Notepad  \r\n        Versi\xF3n 1.0\r\n\r\nCreado por: Andr\xE9 F. Villca Torrico  \r\nEstudiante de Ingenier\xEDa Inform\xE1tica  \r\nUniversidad Mayor de San Sim\xF3n  \r\nTPBN",IDC_STC1,"Static",0x50000000,64,158,120,59,0x00000000
+  CONTROL "Licencia: GNU General Public License (GPL)  \nEste software es libre y de c\xF3digo abierto.  \nPuedes modificarlo, distribuirlo y usarlo bajo los t\xE9rminos de la licencia GNU.\n\n\xA9 2025 Andr\xE9 F. Villca Torrico. Todos los derechos reservados.",IDC_STC2,"Static",0x50000000,48,264,146,56,0x00000000
+  CONTROL "Fecha de compilaci\xF3n: 11/12/2025  \r\nCorreo: 202401363@est.umss.edu",IDC_STC3,"Static",0x50000000,66,228,118,24,0x00000000
+END

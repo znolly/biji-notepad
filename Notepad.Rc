@@ -1,0 +1,3 @@
+#include "Res/InfoDlg.rc"
+#include "Res/NotepadRes.rc"
+#include "Res/NotepadDlg.rc"
