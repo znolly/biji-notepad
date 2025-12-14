@@ -14,7 +14,6 @@ includelib comdlg32.lib
 
 DlgProc			PROTO	:HWND,:UINT,:WPARAM,:LPARAM
 InfoProc		PROTO	:HWND,:UINT,:WPARAM,:LPARAM
-EditProc        PROTO   :HWND,:UINT,:WPARAM,:LPARAM
 
 .const
 
@@ -48,6 +47,9 @@ IDC_TOOLBAR_INFO    equ 3007
 IDD_INFO            equ 1000
 
 ; Icon image
+WM_SETICON equ 80h
+ICON_BIG   equ 1
+ICON_SMALL equ 0
 IDI_ICON equ 100
 
 MAXSIZE				equ 260
@@ -96,5 +98,6 @@ bHasFileName	dd ?
 
 ;#########################################################################
 
+EditProc PROTO :HWND,:UINT,:WPARAM,:LPARAM
 UpdateStatusBar PROTO
 PopulateTreeView PROTO

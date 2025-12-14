@@ -11,7 +11,7 @@ start:
 	invoke GetModuleHandle,NULL
 	mov		hInstance,eax
 
-    invoke InitCommonControls
+    invoke InitCommonControls ; necesario para el toolbar y treeview
 	invoke DialogBoxParam,hInstance,IDD_DIALOG1,NULL,addr DlgProc,NULL
 	invoke ExitProcess,0
 
@@ -32,6 +32,11 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 
 	mov		eax,uMsg
 	.if eax==WM_INITDIALOG
+		;setting up the ico
+		invoke LoadIcon, hInstance, IDI_ICON
+		invoke SendMessage, hWin, WM_SETICON, ICON_BIG, eax
+
+		
 		; Get edit control handle
 		invoke GetDlgItem,hWin,IDC_EDT1
 		mov hEdit,eax
@@ -84,6 +89,19 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 		; Redo button
 		mov tbb.iBitmap,STD_REDOW
 		mov tbb.idCommand,IDC_TOOLBAR_REDO
+		invoke SendMessage,hToolbar,TB_ADDBUTTONS,1,addr tbb
+
+		; Separator
+		mov tbb.iBitmap,0
+		mov tbb.idCommand,0
+		mov tbb.fsStyle,TBSTYLE_SEP
+		invoke SendMessage,hToolbar,TB_ADDBUTTONS,1,addr tbb
+		
+		; Info button
+		mov tbb.iBitmap,STD_HELP
+		mov tbb.idCommand,IDC_TOOLBAR_INFO
+		mov tbb.fsState,TBSTATE_ENABLED
+		mov tbb.fsStyle,TBSTYLE_BUTTON
 		invoke SendMessage,hToolbar,TB_ADDBUTTONS,1,addr tbb
 		
 		; Initialize status bar
@@ -141,35 +159,55 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 						; Open file
 						invoke CreateFile,addr szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL
 						.if eax!=INVALID_HANDLE_VALUE
-							mov hFile,eax
-							invoke GetFileSize,hFile,NULL
-							mov fileSize,eax
-							invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
-							.if eax!=NULL
-								push eax
-								invoke GlobalLock,eax
-								mov edi,eax
-								
-								invoke ReadFile,hFile,edi,fileSize,addr bytesRead,NULL
-								
-								mov eax,bytesRead
-								mov byte ptr [edi+eax],0
-								
-								invoke SetWindowText,hEdit,edi
-								
-								pop eax
-								invoke GlobalUnlock,eax
-								invoke GlobalFree,eax
-							.endif
-							invoke CloseHandle,hFile
-							
-							mov bHasFileName,TRUE
-							mov bFileModified,FALSE
-							
-							call PopulateTreeView
-							
-							invoke wsprintf,addr buffer,addr szFileNameFormat,addr szFileName
-							invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
+						    mov hFile,eax
+						    invoke GetFileSize,hFile,NULL
+						    mov fileSize,eax
+							invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
+						
+						    ; --- CORRECCI�N 1: Manejar archivo vac�o expl�citamente ---
+						    .if fileSize == 0
+						        ; Si est� vac�o, simplemente limpiamos el editor y no hacemos nada de memoria
+						        invoke SetWindowText,hEdit,NULL
+						    .else
+						        ; Si TIENE contenido, procedemos con la memoria
+						        
+						        ; --- CORRECCI�N 2: Reservar fileSize + 1 byte ---
+						        ; Necesitamos espacio extra para el terminador nulo (el 0 del final)
+						        ; para no escribir fuera de la memoria reservada.
+						        mov eax, fileSize
+						        inc eax         ; Sumamos 1 al tama�o
+						        
+						        invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT, eax ; Usamos el tama�o + 1
+						        .if eax!=NULL
+						            push eax
+						            invoke GlobalLock,eax
+						            mov edi,eax
+						            
+						            ; Leemos el archivo (usamos fileSize original, no el incrementado)
+						            invoke ReadFile,hFile,edi,fileSize,addr bytesRead,NULL
+						            
+						            ; Ponemos el terminador nulo al final
+						            mov eax,bytesRead
+						            mov byte ptr [edi+eax],0
+						            
+						            invoke SetWindowText,hEdit,edi
+						            
+						            pop eax
+						            invoke GlobalUnlock,eax
+						            invoke GlobalFree,eax
+						        .endif
+						    .endif
+						    ; --- FIN DE LA CORRECCI�N ---
+						
+						    invoke CloseHandle,hFile
+						    
+						    mov bHasFileName,TRUE
+						    mov bFileModified,FALSE
+						    
+						    call PopulateTreeView
+						    
+						    invoke wsprintf,addr buffer,addr szFileNameFormat,addr szFileName
+						    invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
 						.endif
 					.endif
 				.endif
@@ -188,14 +226,6 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			mov bHasFileName,FALSE
 			mov szFileName,0
 			invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr szTitle
-		.elseif eax==IDM_FILE_NEW
-			; Clear edit control
-			invoke SetWindowText,hEdit,NULL
-			mov bFileModified,FALSE
-			mov bHasFileName,FALSE
-			mov szFileName,0
-			invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr szTitle
-			
 		.elseif eax==IDC_TOOLBAR_OPEN
 			; Open file dialog
 			mov ofn.lStructSize,sizeof OPENFILENAME
@@ -220,6 +250,8 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 					; Get file size
 					invoke GetFileSize,hFile,NULL
 					mov fileSize,eax
+					inc fileSize
+					invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
 					
 					; Allocate memory for file content
 					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
@@ -283,6 +315,8 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 					; Get file size
 					invoke GetFileSize,hFile,NULL
 					mov fileSize,eax
+					inc fileSize
+					invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
 					
 					; Allocate memory for file content
 					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
@@ -521,6 +555,9 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			; Redo (not directly supported in standard edit control, but we try)
 			invoke SendMessage,hEdit,EM_UNDO,0,0
 			
+		.elseif eax==IDC_TOOLBAR_INFO
+			invoke DialogBoxParam,hInstance,IDD_INFO,hWin,addr InfoProc,NULL
+
 		.else
 			; Check if edit control changed
 			mov eax,wParam
@@ -692,6 +729,34 @@ EditProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 	
 	ret
 EditProc endp
+
+;########################################################################
+; InfoProc - Info Dialog Procedure
+;########################################################################
+
+InfoProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
+	mov eax,uMsg
+	.if eax==WM_INITDIALOG
+		; Set icon
+		invoke LoadIcon,hInstance,IDI_ICON
+		invoke SendMessage,hWin,WM_SETICON,ICON_BIG,eax
+		invoke SendMessage,hWin,WM_SETICON,ICON_SMALL,eax
+		mov eax,TRUE
+		ret
+	.elseif eax==WM_COMMAND
+		mov eax,wParam
+		.if eax==IDOK || eax==IDCANCEL
+			invoke EndDialog,hWin,0
+		.endif
+	.elseif eax==WM_CLOSE
+		invoke EndDialog,hWin,0
+	.else
+		mov eax,FALSE
+		ret
+	.endif
+	mov eax,TRUE
+	ret
+InfoProc endp
 
 end start
 

@@ -13,6 +13,10 @@ includelib shell32.lib
 includelib comdlg32.lib
 
 DlgProc			PROTO	:HWND,:UINT,:WPARAM,:LPARAM
+InfoProc		PROTO	:HWND,:UINT,:WPARAM,:LPARAM
+EditProc        PROTO   :HWND,:UINT,:WPARAM,:LPARAM
+UpdateStatusBar  PROTO
+PopulateTreeView PROTO
 
 .const
 
@@ -40,6 +44,10 @@ IDC_TOOLBAR_SAVE	equ 3003
 IDC_TOOLBAR_SAVEAS	equ 3004
 IDC_TOOLBAR_UNDO	equ 3005
 IDC_TOOLBAR_REDO	equ 3006
+IDC_TOOLBAR_INFO    equ 3007
+
+; Info Dialog
+IDD_INFO            equ 1000
 
 ; Icon image
 IDI_ICON equ 100
@@ -87,9 +95,3 @@ bHasFileName	dd ?
 
 ;#########################################################################
 
-
-;#########################################################################
-
-EditProc PROTO :HWND,:UINT,:WPARAM,:LPARAM
-UpdateStatusBar PROTO
-PopulateTreeView PROTO

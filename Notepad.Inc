@@ -14,6 +14,9 @@ includelib comdlg32.lib
 
 DlgProc			PROTO	:HWND,:UINT,:WPARAM,:LPARAM
 InfoProc		PROTO	:HWND,:UINT,:WPARAM,:LPARAM
+EditProc        PROTO   :HWND,:UINT,:WPARAM,:LPARAM
+UpdateStatusBar  PROTO
+PopulateTreeView PROTO
 
 .const
 
@@ -24,15 +27,6 @@ IDC_TBR1			equ 1003
 IDC_TRV1			equ 1004
 IDC_SBR1			equ 1005
 IDC_BTN1			equ 1006
-
-; Menu IDs
-IDM_FILE_NEW		equ 2001
-IDM_FILE_OPEN		equ 2002
-IDM_FILE_SAVE		equ 2003
-IDM_FILE_SAVEAS		equ 2004
-IDM_FILE_EXIT		equ 2005
-IDM_EDIT_UNDO		equ 2006
-IDM_EDIT_REDO		equ 2007
 
 ; Toolbar button IDs
 IDC_TOOLBAR_NEW		equ 3001
@@ -47,9 +41,6 @@ IDC_TOOLBAR_INFO    equ 3007
 IDD_INFO            equ 1000
 
 ; Icon image
-WM_SETICON equ 80h
-ICON_BIG   equ 1
-ICON_SMALL equ 0
 IDI_ICON equ 100
 
 MAXSIZE				equ 260
@@ -95,9 +86,3 @@ bHasFileName	dd ?
 
 ;#########################################################################
 
-
-;#########################################################################
-
-EditProc PROTO :HWND,:UINT,:WPARAM,:LPARAM
-UpdateStatusBar PROTO
-PopulateTreeView PROTO

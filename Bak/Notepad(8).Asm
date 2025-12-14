@@ -1,6 +1,6 @@
 .386
-.model flat, stdcall  ;32 bit memory model
-option casemap :none  ;case sensitive
+.model flat, stdcall
+option casemap :none
 
 include Notepad.inc
 
@@ -11,7 +11,7 @@ start:
 	invoke GetModuleHandle,NULL
 	mov		hInstance,eax
 
-    invoke InitCommonControls ; necesario para el toolbar y treeview
+    invoke InitCommonControls
 	invoke DialogBoxParam,hInstance,IDD_DIALOG1,NULL,addr DlgProc,NULL
 	invoke ExitProcess,0
 
@@ -32,7 +32,7 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 
 	mov		eax,uMsg
 	.if eax==WM_INITDIALOG
-		;setting up the ico
+
 		invoke LoadIcon, hInstance, IDI_ICON
 		invoke SendMessage, hWin, WM_SETICON, ICON_BIG, eax
 
@@ -226,6 +226,14 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			mov bHasFileName,FALSE
 			mov szFileName,0
 			invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr szTitle
+		.elseif eax==IDM_FILE_NEW
+			; Clear edit control
+			invoke SetWindowText,hEdit,NULL
+			mov bFileModified,FALSE
+			mov bHasFileName,FALSE
+			mov szFileName,0
+			invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr szTitle
+			
 		.elseif eax==IDC_TOOLBAR_OPEN
 			; Open file dialog
 			mov ofn.lStructSize,sizeof OPENFILENAME
@@ -289,7 +297,70 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 					invoke wsprintf,addr buffer,addr szTitle
 					invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
 				.endif
-			.endif			
+			.endif
+		.elseif eax==IDM_FILE_OPEN
+		.elseif eax==IDM_FILE_OPEN
+			; Open file dialog
+			mov ofn.lStructSize,sizeof OPENFILENAME
+			push hWin
+			pop ofn.hwndOwner
+			push hInstance
+			pop ofn.hInstance
+			mov ofn.lpstrFilter,offset szFilter
+			mov ofn.lpstrFile,offset szFileName
+			mov ofn.nMaxFile,MAXSIZE
+			mov ofn.lpstrFileTitle,offset szFileTitle
+			mov ofn.nMaxFileTitle,MAXSIZE
+			mov ofn.Flags,OFN_FILEMUSTEXIST or OFN_PATHMUSTEXIST or OFN_HIDEREADONLY
+			
+			invoke GetOpenFileName,addr ofn
+			.if eax!=0
+				; Open and read file
+				invoke CreateFile,addr szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL
+				.if eax!=INVALID_HANDLE_VALUE
+					mov hFile,eax
+					
+					; Get file size
+					invoke GetFileSize,hFile,NULL
+					mov fileSize,eax
+					inc fileSize
+					invoke SendMessage,hEdit,EM_SETLIMITTEXT,0,0
+					
+					; Allocate memory for file content
+					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,fileSize
+					.if eax!=NULL
+						push eax
+						invoke GlobalLock,eax
+						mov edi,eax
+						
+						; Read file into buffer
+						invoke ReadFile,hFile,edi,fileSize,addr bytesRead,NULL
+						
+						; Add null terminator
+						mov eax,bytesRead
+						mov byte ptr [edi+eax],0
+						
+						; Set text to edit control
+						invoke SetWindowText,hEdit,edi
+						
+						; Cleanup memory
+						pop eax
+						invoke GlobalUnlock,eax
+						invoke GlobalFree,eax
+					.endif
+					
+					; Close file handle
+					invoke CloseHandle,hFile
+					
+					mov bHasFileName,TRUE
+					mov bFileModified,FALSE
+					
+					; Update title
+					invoke wsprintf,addr buffer,addr szTitle
+					invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
+				.endif
+			.endif
+			
 		.elseif eax==IDC_TOOLBAR_SAVE
 			; Check if we have a filename
 			.if bHasFileName==FALSE
@@ -357,14 +428,141 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 				invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
 			.endif
 			@@:
+		.elseif eax==IDM_FILE_SAVE
+			; Check if we have a filename
+			.if bHasFileName==FALSE
+				; Show Save As dialog
+				mov ofn.lStructSize,sizeof OPENFILENAME
+				push hWin
+				pop ofn.hwndOwner
+				push hInstance
+				pop ofn.hInstance
+				mov ofn.lpstrFilter,offset szFilter
+				mov ofn.lpstrFile,offset szFileName
+				mov ofn.nMaxFile,MAXSIZE
+				mov ofn.lpstrFileTitle,offset szFileTitle
+				mov ofn.nMaxFileTitle,MAXSIZE
+				mov ofn.Flags,OFN_OVERWRITEPROMPT or OFN_HIDEREADONLY
+				
+				invoke GetSaveFileName,addr ofn
+				.if eax==0
+					jmp @F
+				.endif
+				mov bHasFileName,TRUE
+			.endif
+			
+			; Save file
+			invoke CreateFile,addr szFileName,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL
+			.if eax!=INVALID_HANDLE_VALUE
+				mov hFile,eax
+				
+				; Get text length
+				invoke GetWindowTextLength,hEdit
+				.if eax>0
+					inc eax
+					invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,eax
+					.if eax!=NULL
+						push eax
+						invoke GlobalLock,eax
+						mov edi,eax
+						pop eax
+						push eax
+						
+						; Get text
+						invoke GetWindowText,hEdit,edi,65535
+						
+						; Write to file
+						invoke lstrlen,edi
+						mov fileSize,eax
+						invoke WriteFile,hFile,edi,fileSize,addr bytesWritten,NULL
+						
+						; Cleanup
+						pop eax
+						invoke GlobalUnlock,eax
+						invoke GlobalFree,eax
+						
+						mov bFileModified,FALSE
+					.endif
+				.endif
+				
+				invoke CloseHandle,hFile
+				
+				; Update TreeView with current directory
+				call PopulateTreeView
+				
+				; Update status bar with filename
+				invoke wsprintf,addr buffer,addr szFileNameFormat,addr szFileName
+				invoke SendMessage,hStatusBar,SB_SETTEXT,0,addr buffer
+			.endif
+			@@:
 		.elseif eax==IDC_BTN1
-			invoke SendMessage,hWin,WM_COMMAND,IDC_TOOLBAR_SAVE,0	
+			invoke SendMessage,hWin,WM_COMMAND,IDC_TOOLBAR_SAVE,0
+			
+		.elseif eax==IDM_FILE_SAVEAS
+			; Save As dialog
+			mov ofn.lStructSize,sizeof OPENFILENAME
+			push hWin
+			pop ofn.hwndOwner
+			push hInstance
+			pop ofn.hInstance
+			mov ofn.lpstrFilter,offset szFilter
+			mov ofn.lpstrFile,offset szFileName
+			mov ofn.nMaxFile,MAXSIZE
+			mov ofn.lpstrFileTitle,offset szFileTitle
+			mov ofn.nMaxFileTitle,MAXSIZE
+			mov ofn.Flags,OFN_OVERWRITEPROMPT or OFN_HIDEREADONLY
+			
+			invoke GetSaveFileName,addr ofn
+			.if eax!=0
+				mov bHasFileName,TRUE
+				; Use same save code as above
+				invoke CreateFile,addr szFileName,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL
+				.if eax!=INVALID_HANDLE_VALUE
+					push eax
+					invoke GetWindowTextLength,hEdit
+					.if eax>0
+						inc eax
+						invoke GlobalAlloc,GMEM_MOVEABLE or GMEM_ZEROINIT,eax
+						.if eax!=NULL
+							push eax
+							invoke GlobalLock,eax
+							mov edi,eax
+							pop eax
+							push eax
+							invoke GetWindowText,hEdit,edi,65535
+							invoke lstrlen,edi
+							mov fileSize,eax
+							invoke WriteFile,hFile,edi,fileSize,addr bytesWritten,NULL
+							pop eax
+							invoke GlobalUnlock,eax
+							invoke GlobalFree,eax
+							mov bFileModified,FALSE
+						.endif
+					.endif
+					pop eax
+					invoke CloseHandle,eax
+				.endif
+			.endif
+			
+		.elseif eax==IDM_FILE_EXIT
+			invoke SendMessage,hWin,WM_CLOSE,0,0
+			
 		.elseif eax==IDC_TOOLBAR_UNDO
 			; Undo
 			invoke SendMessage,hEdit,EM_UNDO,0,0
+			
+		.elseif eax==IDM_EDIT_UNDO
+			; Undo
+			invoke SendMessage,hEdit,EM_UNDO,0,0
+			
 		.elseif eax==IDC_TOOLBAR_REDO
 			; Redo (not directly supported in standard edit control, but we try)
 			invoke SendMessage,hEdit,EM_UNDO,0,0
+			
+		.elseif eax==IDM_EDIT_REDO
+			; Redo (not directly supported in standard edit control, but we try)
+			invoke SendMessage,hEdit,EM_UNDO,0,0
+			
 		.elseif eax==IDC_TOOLBAR_INFO
 			invoke DialogBoxParam,hInstance,IDD_INFO,hWin,addr InfoProc,NULL
 
@@ -384,6 +582,7 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 				.endif
 			.endif
 		.endif
+
 	.elseif eax==WM_SIZE
 		; Resize status bar
 		invoke SendMessage,hStatusBar,WM_SIZE,0,0
